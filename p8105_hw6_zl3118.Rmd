@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(rnoaa)
+library(modelr)
+library(viridis)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -169,9 +171,71 @@ full_plot
 
 From the plot above, we see the lowest adjusted OR is from New York and highest is from Albuquerque. Around 90% of the cities have a adjusted OR below 1. Those cities have odds of having a resolved homicide lower among male victims than that of female victims, adjusting for  age and race. The cities on the right side with adjusted OR greater than one have the reversed finding. The odds of having a resolved homicide higher among male victims than that of female victims, adjusting for  age and race.
 
+```{r, Q3}
+
+birthweight_df = read_csv("./birthweight.csv")
+
+birthweight_clean = birthweight_df %>% 
+  mutate(babysex = as.factor(babysex),
+         frace = as.factor(frace),
+         malform = as.factor(malform),
+         mrace = as.factor(mrace)) 
+
+missing_data <- sum(is.na(birthweight_clean))
+
+```
+There is no missing data (missing_data = `r missing_data`).
+
+I picked weight gain for regression analyses. It is based on the hypothesis that mom who gain more weight during pregnancy period can have a higher birth weight baby. And it is commonly seen in clinical that control weight of mom can help control the size of the baby. Based on the regression analysis below, we see a positive association between weight gain and baby birth weight. The more mom gained weight during pregnancy, the higher baby's birth weight will be. The plot of model residuals is also showed below
+
+```{r, model 1}
+
+weightgain_reg = lm(bwt ~ wtgain, data = birthweight_clean)
+
+weightgain_reg
+
+residuals = birthweight_clean %>% 
+  select(bwt, wtgain) %>% 
+  modelr::add_residuals(weightgain_reg) %>% 
+  modelr::add_predictions(weightgain_reg)
+
+residuals %>% ggplot(aes(x = wtgain, y = resid)) + geom_boxplot() + labs(x = "weight gain during pregnancy", y = "residual")
+
+```
+
+```{r, build model 2/3}
+
+model2 = lm(bwt ~ blength + gaweeks, data = birthweight_clean)
+model2
+
+model3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birthweight_clean)
+model3
+
+```
+
 ```{r}
 
+crossvalidation = crossv_mc(birthweight_clean, 100) %>% 
+  mutate(train = map(train, as_tibble), test = map(test, as_tibble)) %>% 
+  mutate(m1 = map(train, ~lm(bwt ~ wtgain, data = .x)), 
+         m2 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)), 
+         m3 = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex 
+                 + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
+  mutate(rmse_m1 = map2_dbl(m1, test, ~rmse(model = .x, data = .y)), 
+         rmse_m2 = map2_dbl(m2, test, ~rmse(model = .x, data = .y)), 
+         rmse_m3 = map2_dbl(m3, test, ~rmse(model = .x, data = .y)))
+
+crossvalidation_plot = crossvalidation %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(everything(), 
+               names_to = "model",
+               values_to = "rmse",
+               names_prefix = "rmse_") %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_boxplot() + labs(x = "Models", y = "Root-mean-square deviation")
+
+crossvalidation_plot
 
 
 ```
 
+Comparing between the models in the plot, model 1 have the highest root-mean-square deviation, follow by model 2, and model 3 have the lowest root-mean-square deviation. Model 3 would be the best model due to the smallest root-mean-square deviation.
