@@ -103,7 +103,40 @@ bootstrap_results_log %>%
 The 95% confidence intervals are `(0.8940, 0.9274)` and `(1.9657,2.0586)` for `r-squared` and `log(beta0*beta1)`, respectively. 
 
 
+```{r, question 2}
+
+homicides = read_csv("./homicide-data.csv")
+homicides_clean = homicides %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, state, sep = "_")) %>% 
+  filter(!city_state %in% c("Dallas_TX", "Phoenix_AZ", "Kansas City_MO", "Tulsa_AL"), 
+         victim_race %in% c("Black", "White")) %>% 
+  mutate(victim_age = as.numeric(victim_age),
+         resolved = as.numeric(disposition == "Closed by arrest"),
+         victim_race = fct_relevel(victim_race, "White"),
+         victim_sex = fct_relevel(victim_sex, "Female"))
+
+baltimore_glm = homicides_clean %>% 
+  filter(city_state == "Baltimore_MD") %>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, family = binomial(), data = .) %>% 
+  broom::tidy()
+
+baltimore_glm
+
+baltimore_OR = baltimore_glm %>% 
+  mutate(OR = exp(estimate),
+         CI_lower = exp(estimate - 1.96 * std.error),
+         CI_upper = exp(estimate + 1.96 * std.error))
+
+baltimore_OR %>%
+  filter(term == "victim_sexMale") %>%
+  select(term, OR, CI_lower, CI_upper) %>% 
+  knitr::kable(digits = 2)
+
+```
+
 ```{r}
+
 
 
 ```
