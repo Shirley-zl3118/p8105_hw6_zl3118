@@ -23,6 +23,7 @@ knitr::opts_chunk$set(
 )
 
 ```
+### Question 1
 
 ```{r, Probelm 1}
 
@@ -104,6 +105,7 @@ bootstrap_results_log %>%
 ```
 The 95% confidence intervals are `(0.8940, 0.9274)` and `(1.9657,2.0586)` for `r-squared` and `log(beta0*beta1)`, respectively. 
 
+### Question 2
 
 ```{r, question 2}
 
@@ -171,6 +173,8 @@ full_plot
 
 From the plot above, we see the lowest adjusted OR is from New York and highest is from Albuquerque. Around 90% of the cities have a adjusted OR below 1. Those cities have odds of having a resolved homicide lower among male victims than that of female victims, adjusting for  age and race. The cities on the right side with adjusted OR greater than one have the reversed finding. The odds of having a resolved homicide higher among male victims than that of female victims, adjusting for  age and race.
 
+### Question 3
+
 ```{r, Q3}
 
 birthweight_df = read_csv("./birthweight.csv")
@@ -234,7 +238,6 @@ crossvalidation_plot = crossvalidation %>%
   ggplot(aes(x = model, y = rmse)) + geom_boxplot() + labs(x = "Models", y = "Root-mean-square deviation")
 
 crossvalidation_plot
-
 
 ```
 
