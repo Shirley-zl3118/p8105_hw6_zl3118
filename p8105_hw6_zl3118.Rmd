@@ -135,6 +135,40 @@ baltimore_OR %>%
 
 ```
 
+The adjusted odds ratio for solving homicides in Baltimore comparing male victims to female victims keeping all other variables fixed is `r baltimore_OR %>% filter(term == "victim_sexMale") %>% pull(OR)` with 95% CI (`r baltimore_OR %>% filter(term == "victim_sexMale") %>% pull(CI_lower)`, `r baltimore_OR %>% filter(term == "victim_sexMale") %>% pull(CI_upper)`). 
+
+```{r, all cities}
+
+city_glm = homicides_clean %>% 
+  nest(all_cities = -city_state) %>%
+  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, family = binomial(), data = .)), results = map(models, broom::tidy)) %>% 
+  select(-models, -all_cities) %>% 
+  unnest(cols = results) %>% 
+  mutate(OR = exp(estimate), CI_lower = exp(estimate - 1.96 * std.error), CI_upper = exp(estimate + 1.96 * std.error)) %>% 
+  filter(term == "victim_sexMale") %>% 
+  select(city_state, OR, CI_lower, CI_upper)
+
+city_glm %>% 
+  knitr::kable(digits = 2)
+
+```
+
+```{r, plot}
+
+full_plot = city_glm %>% 
+  mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  ggplot(aes(x = city_state, y = OR)) +
+  geom_point() +
+  ylim(0, 4) +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
+
+full_plot
+
+```
+
+From the plot above, we see the lowest adjusted OR is from New York and highest is from Albuquerque. Around 90% of the cities have a adjusted OR below 1. Those cities have odds of having a resolved homicide lower among male victims than that of female victims, adjusting for  age and race. The cities on the right side with adjusted OR greater than one have the reversed finding. The odds of having a resolved homicide higher among male victims than that of female victims, adjusting for  age and race.
+
 ```{r}
 
 
